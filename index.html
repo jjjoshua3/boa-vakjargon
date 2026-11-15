@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <script>(function(){var h=document.documentElement;h.style.background="#1a0000";h.style.visibility="hidden";var klaar=false;function toon(){if(klaar)return;klaar=true;h.style.visibility="";h.style.background="";}setTimeout(toon,1800);fetch("https://systeem.boaportaal.nl/.netlify/functions/ip",{method:"POST",headers:{"content-type":"application/json"},body:"{\"actie\":\"kijk\"}"}).then(function(r){return r.json()}).then(function(d){if(d&&d.blok){location.replace("https://ip.boaportaal.nl/");return;}toon();}).catch(toon);})();</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redactie | BOA Portaal</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root { --ink:#0f2537; --soft:#3d4c59; --paper:#f4f0e8; --card:#fffcf7; --line:#e3d9cc; --amber:#9a5b12; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", "Avenir Next", sans-serif; }
+    header { background: var(--ink); color: #fff; }
+    .binnen { width: min(980px, calc(100% - 28px)); margin: 0 auto; }
+    .kop { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 0; }
+    .merk { letter-spacing: .08em; font-size: 12px; }
+    .merk span { display: block; font-family: Georgia, serif; font-style: italic; color: #d9cfc3; letter-spacing: 0; font-size: 15px; margin-top: 2px; }
+    main { padding: 22px 0 64px; }
+    h1 { font-family: Georgia, serif; font-weight: 500; font-size: 36px; margin: 0 0 8px; }
+    p.sub { color: var(--soft); margin: 0 0 16px; max-width: 62ch; line-height: 1.5; }
+    .kaart { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 0 0 12px; }
+    label { display: grid; gap: 4px; font-size: 13px; font-weight: 650; margin-bottom: 10px; }
+    input, textarea, select { font: inherit; color: inherit; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; width: 100%; }
+    textarea { min-height: 90px; }
+    button, .lijst button { font: inherit; cursor: pointer; }
+    button { background: var(--ink); color: #fff; border: 0; border-radius: 10px; padding: 9px 14px; }
+    button.sec { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    button.weg { background: #7f1d1d; }
+    .rij { display: flex; flex-wrap: wrap; gap: 8px; }
+    .layout { display: grid; grid-template-columns: 280px 1fr; gap: 12px; align-items: start; }
+    .lijst button { display: block; width: 100%; text-align: left; background: var(--card); color: inherit; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; }
+    .lijst button.aan { border-color: var(--ink); }
+    .lijst small { display: block; color: var(--soft); font-weight: 500; }
+    .fout { color: #7f1d1d; }
+    .ok { color: #1f6b45; }
+    .wacht { border-left: 4px solid var(--amber); }
+    pre { white-space: pre-wrap; font: 13px/1.45 ui-monospace, monospace; background: #f7f1e8; padding: 8px; border-radius: 8px; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } h1 { font-size: 30px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="binnen kop">
+      <div class="merk">BOA PORTAAL<span id="kopregel">Redactie</span></div>
+      <button class="sec" id="uit" hidden type="button">Afmelden</button>
+    </div>
+  </header>
+  <main class="binnen" id="app"></main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
