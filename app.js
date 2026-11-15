@@ -4,6 +4,19 @@ const sb = createClient("https://ofzyqwpztohflxdhqgbb.supabase.co", "sb_publisha
 const API = "https://systeem.boaportaal.nl/.netlify/functions";
 const SITE = "jargon";
 const TITEL = { feit: "Feitcodes", boom: "Beslisbomen", jargon: "Vakjargon", trainer: "Trainer" };
+const UITLEG = {
+  feit: "Hier pas je een feitcode aan die op boaportaal.nl staat. De akte en het Feitenboekje gaan voor op deze tekst.",
+  boom: "Hier pas je een beslisboom aan. Het blijft een geheugensteun. De akte en de wet gaan voor.",
+  jargon: "Hier pas je een begrip aan. Kort houden, en alleen wat klopt met de wet of het Feitenboekje.",
+  trainer: "Hier pas je een oefenvraag, een beginsel of een casus aan. Het antwoord moet de wettekst blijven volgen.",
+};
+const ZOEK = {
+  feit: "Zoek op code of titel, bijvoorbeeld D 517",
+  boom: "Zoek een boom",
+  jargon: "Zoek een begrip",
+  trainer: "Zoek in deze lijst",
+};
+const MODUSNAAM = { vraag: "Vragen", beginsel: "Beginselen", casus: "Casussen" };
 const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"\']/g, (c) => ({"&": "&" + "amp;", "<": "&" + "lt;", ">": "&" + "gt;", '"': "&" + "quot;", "'": "&" + "#39;"}[c]));
 let ik = null;
@@ -106,34 +119,60 @@ function mag() {
   return Boolean(ik?.mag?.[SITE === "trainer" ? "trainer" : SITE]);
 }
 
-function teken() {
+function bijVan(item, soort) {
+  if (soort === "feit") return item.artikel || "";
+  if (soort === "jargon") return String(item.uitleg || "").slice(0, 80);
+  if (soort === "boom") return String(item.inleiding || "").slice(0, 80);
+  if (soort === "vraag") return String(item.toelichting || "").slice(0, 80);
+  return String(item.doel || item.tekst || "").slice(0, 80);
+}
+
+function kortVoorstel(rij) {
+  if (rij.payload?.verwijderd) return "Voorstel om deze tekst van de site te halen.";
+  const velden = ["code", "titel", "term", "vraag", "artikel", "tarief", "uitleg"];
+  const stuk = velden.filter((naam) => rij.payload?.[naam]).map((naam) => String(rij.payload[naam]).replace(/\s+/g, " ").slice(0, 90));
+  return stuk.slice(0, 2).join(" · ") || rij.sleutel;
+}
+
+function teken(zoekactief) {
   if (!ik) {
-    app.innerHTML = `<h1>Inloggen</h1><p class="sub">Alleen een medewerker met dit redactierecht. Een wijziging komt niet direct op de site.</p>
-      <form id="in" class="kaart"><label>Zakelijk adres of Client-ID<input name="email" required autocapitalize="none"></label><label>Wachtwoord<input type="password" name="password" required></label><button>Inloggen</button><p class="fout">${esc(fout)}</p></form>`;
+    app.innerHTML = `<p class="kicker">Alleen voor medewerkers</p><h1>${esc(TITEL[SITE])}</h1>
+      <p class="sub">${esc(UITLEG[SITE])} Wat je hier opslaat, is een voorstel. Bezoekers zien het pas als de hoofdbeheerder het goedkeurt.</p>
+      <div class="stappen"><div><b>1. Kies</b><span>Zoek de tekst die niet klopt, of begin een nieuwe.</span></div><div><b>2. Leg voor</b><span>Jij slaat het voorstel op. De site verandert nog niet.</span></div><div><b>3. Goedkeuren</b><span>De hoofdbeheerder keurt het hier goed of wijst het af.</span></div></div>
+      <form id="in" class="kaart"><h2>Inloggen</h2><p class="sub">Met het zakelijke e-mailadres waarmee je ook op het portaal inlogt. Een Client-ID werkt hier niet.</p><label>Zakelijk e-mailadres<input name="email" type="email" required autocapitalize="none" autocomplete="username"></label><label>Wachtwoord<input type="password" name="password" required autocomplete="current-password"></label><button>Inloggen</button>${fout ? `<p class="fout">${esc(fout)}</p>` : ""}</form>`;
     document.getElementById("in").onsubmit = aanmelden;
     return;
   }
   if (!mag()) {
-    app.innerHTML = `<h1>${esc(TITEL[SITE])}</h1><p class="sub">${esc(ik.pv_naam)} ${esc(ik.client_id)} heeft dit recht niet. De hoofdbeheerder zet het aan in systeem, bij Redactierecht.</p>`;
+    app.innerHTML = `<p class="kicker">Geen toegang</p><h1>${esc(TITEL[SITE])}</h1><div class="kaart"><p>${esc(ik.pv_naam)} · ${esc(ik.client_id)} mag deze teksten niet wijzigen.</p><p class="sub">De hoofdbeheerder zet dat aan in systeem, bij Accounts, onder Redactierecht.</p></div>`;
     return;
   }
-  const items = lijst().filter(({ item, soort }) => labelVan(item, soort).toLowerCase().includes(zoek.toLowerCase()));
+  const items = lijst().filter(({ item, soort }) => `${labelVan(item, soort)} ${bijVan(item, soort)}`.toLowerCase().includes(zoek.toLowerCase()));
   const wacht = voorstellen.filter((rij) => rij.status === "wacht");
-  app.innerHTML = `<h1>${esc(TITEL[SITE])}</h1>
-    <p class="sub">${esc(ik.pv_naam)} · ${esc(ik.client_id)}. Wat je opslaat, blijft een voorstel. De hoofdbeheerder keurt het goed voordat boaportaal.nl het toont.</p>
+  const gekozenSleutel = gekozen ? sleutelVan(gekozen.item, gekozen.soort) : "";
+  app.innerHTML = `<p class="kicker">${ik.keuren ? "Hoofdbeheerder" : "Redactie"} · ${esc(ik.client_id)}</p><h1>${esc(TITEL[SITE])}</h1>
+    <p class="sub">${esc(UITLEG[SITE])}</p>
+    <div class="stappen"><div><b>1. Kies een tekst</b><span>${items.length} in deze lijst.</span></div><div><b>2. Pas aan en leg voor</b><span>De live site blijft de oude tekst tonen.</span></div><div><b>3. Goedkeuring</b><span>${wacht.length ? `${wacht.length} wacht${wacht.length === 1 ? "" : "en"} op de hoofdbeheerder.` : "Er ligt nu niets ter goedkeuring."}</span></div></div>
     ${fout ? `<p class="fout">${esc(fout)}</p>` : ""}${melding ? `<p class="ok">${esc(melding)}</p>` : ""}
-    ${ik.keuren ? wacht.map((rij) => `<article class="kaart wacht"><b>${esc(rij.titel)}</b><p>${esc(rij.soort)} · ${esc(rij.sleutel)} · ${esc(rij.indiener)}</p><pre>${esc(JSON.stringify(rij.payload, null, 2).slice(0, 1200))}</pre><div class="rij"><button data-keur="${esc(rij.id)}" data-besluit="goed">Goedkeuren</button><button class="sec" data-keur="${esc(rij.id)}" data-besluit="af">Afwijzen</button></div></article>`).join("") : ""}
-    ${SITE === "trainer" ? `<div class="rij" style="margin-bottom:12px">${["vraag", "beginsel", "casus"].map((naam) => `<button class="${modus === naam ? "" : "sec"}" data-modus="${naam}" type="button">${naam}</button>`).join("")}</div>` : ""}
+    ${ik.keuren && wacht.length ? `<h2>Wacht op goedkeuring</h2>${wacht.map((rij) => `<article class="kaart wacht"><b>${esc(rij.titel)}</b><p class="sub">Voorgelegd door ${esc(rij.indiener)} · ${esc(rij.soort)}</p><p>${esc(kortVoorstel(rij))}</p><div class="rij"><button data-keur="${esc(rij.id)}" data-besluit="goed">Goedkeuren en op de site zetten</button><button class="sec" data-keur="${esc(rij.id)}" data-besluit="af">Afwijzen</button></div></article>`).join("")}` : ""}
+    ${!ik.keuren && wacht.length ? `<div class="kaart wacht"><b>Jouw voorstellen</b><p class="sub">${wacht.length} ${wacht.length === 1 ? "wacht" : "wachten"} nog op de hoofdbeheerder. Tot die tijd ziet niemand ze op het portaal.</p></div>` : ""}
+    ${SITE === "trainer" ? `<div class="rij" style="margin-bottom:12px">${Object.entries(MODUSNAAM).map(([naam, label]) => `<button class="${modus === naam ? "aan" : "sec"}" data-modus="${naam}" type="button">${label}</button>`).join("")}</div>` : ""}
     <div class="layout">
-      <div>
-        <label>Zoeken<input id="zoek" value="${esc(zoek)}"></label>
-        <button id="nieuw" type="button">Nieuw</button>
-        <div class="lijst" style="margin-top:10px">${items.map(({ item, soort }, index) => `<button type="button" data-index="${index}" class="${gekozen && sleutelVan(gekozen.item, gekozen.soort) === sleutelVan(item, soort) ? "aan" : ""}">${esc(labelVan(item, soort))}</button>`).join("") || "<p>Niets gevonden.</p>"}</div>
+      <div class="kaart">
+        <label>Zoeken<input id="zoek" value="${esc(zoek)}" placeholder="${esc(ZOEK[SITE])}"></label>
+        <button id="nieuw" type="button">Nieuwe tekst</button>
+        <div class="lijst">${items.map(({ item, soort }, index) => `<button type="button" data-index="${index}" class="${gekozenSleutel && gekozenSleutel === sleutelVan(item, soort) ? "aan" : ""}">${esc(labelVan(item, soort))}<small>${esc(bijVan(item, soort))}</small></button>`).join("") || `<p class="leeg">Niets met die woorden.</p>`}</div>
       </div>
-      <div>${gekozen ? formulier(gekozen) : `<div class="kaart">Kies links een tekst, of begin een nieuwe.</div>`}</div>
+      <div>${gekozen ? formulier(gekozen) : `<div class="kaart"><h2>Nog niets gekozen</h2><p class="sub">Kies links een bestaande tekst, of begin een nieuwe. Opslaan zet het nog niet op boaportaal.nl.</p></div>`}</div>
     </div>`;
-  document.getElementById("zoek").oninput = (e) => { zoek = e.target.value; teken(); document.getElementById("zoek").focus(); };
-  document.getElementById("nieuw").onclick = () => { const soort = SITE === "trainer" ? modus : SITE; gekozen = { soort, item: leeg(soort), vers: true }; teken(); };
+  const veld = document.getElementById("zoek");
+  const plek = veld.value.length;
+  veld.oninput = (e) => { zoek = e.target.value; teken(true); };
+  if (zoekactief) {
+    veld.focus();
+    veld.setSelectionRange(plek, plek);
+  }
+  document.getElementById("nieuw").onclick = () => { const soort = SITE === "trainer" ? modus : SITE; gekozen = { soort, item: leeg(soort), vers: true }; zoek = ""; teken(); };
   document.querySelectorAll("[data-index]").forEach((knop) => knop.onclick = () => { gekozen = items[Number(knop.dataset.index)]; teken(); });
   document.querySelectorAll("[data-modus]").forEach((knop) => knop.onclick = () => { modus = knop.dataset.modus; gekozen = null; teken(); });
   document.getElementById("bewaar")?.addEventListener("submit", bewaar);
@@ -143,7 +182,7 @@ function teken() {
 
 function formulier(keuze) {
   const regels = velden(keuze.soort, keuze.item).map(([naam, label, waarde, lang]) => `<label>${esc(label)}${lang ? `<textarea name="${esc(naam)}">${esc(waarde)}</textarea>` : `<input name="${esc(naam)}" value="${esc(waarde)}">`}</label>`).join("");
-  return `<form id="bewaar" class="kaart"><h2>${esc(labelVan(keuze.item, keuze.soort))}</h2>${regels}<div class="rij"><button>Voorleggen</button>${keuze.vers ? "" : `<button id="weg" class="weg" type="button">Weghalen voorleggen</button>`}</div></form>`;
+  return `<form id="bewaar" class="kaart"><p class="letop">Dit gaat nog niet live. De hoofdbeheerder moet het eerst goedkeuren.</p><h2>${esc(labelVan(keuze.item, keuze.soort))}</h2>${regels}<div class="rij"><button>Voorleggen ter goedkeuring</button>${keuze.vers ? "" : `<button id="weg" class="weg" type="button">Weghalen voorleggen</button>`}</div></form>`;
 }
 
 async function aanmelden(event) {
