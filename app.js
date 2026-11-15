@@ -139,7 +139,7 @@ function teken(zoekactief) {
     app.innerHTML = `<p class="kicker">Alleen voor medewerkers</p><h1>${esc(TITEL[SITE])}</h1>
       <p class="sub">${esc(UITLEG[SITE])} Wat je hier opslaat, is een voorstel. Bezoekers zien het pas als de hoofdbeheerder het goedkeurt.</p>
       <div class="stappen"><div><b>1. Kies</b><span>Zoek de tekst die niet klopt, of begin een nieuwe.</span></div><div><b>2. Leg voor</b><span>Jij slaat het voorstel op. De site verandert nog niet.</span></div><div><b>3. Goedkeuren</b><span>De hoofdbeheerder keurt het hier goed of wijst het af.</span></div></div>
-      <form id="in" class="kaart"><h2>Inloggen</h2><p class="sub">Met het zakelijke e-mailadres waarmee je ook op het portaal inlogt. Een Client-ID werkt hier niet.</p><label>Zakelijk e-mailadres<input name="email" type="email" required autocapitalize="none" autocomplete="username"></label><label>Wachtwoord<input type="password" name="password" required autocomplete="current-password"></label><button>Inloggen</button>${fout ? `<p class="fout">${esc(fout)}</p>` : ""}</form>`;
+      <form id="in" class="kaart"><h2>Inloggen</h2><p class="sub">Met het e-mailadres waarmee je ook op boaportaal.nl inlogt. Dat is je eigen zakelijke adres, niet een adres op @boaportaal.nl en niet je Client-ID.</p><label>Eigen zakelijk e-mailadres<input name="email" type="email" required autocapitalize="none" autocomplete="username" placeholder="naam@gemeente.nl"></label><label>Wachtwoord<input type="password" name="password" required autocomplete="current-password"></label><button>Inloggen</button>${fout ? `<p class="fout">${esc(fout)}</p>` : ""}</form>`;
     document.getElementById("in").onsubmit = aanmelden;
     return;
   }
@@ -191,7 +191,7 @@ async function aanmelden(event) {
   const f = new FormData(event.target);
   let email = String(f.get("email") || "").trim();
   if (/^BP-\d{4}-[A-Z]{2}$/i.test(email)) {
-    fout = "Log in met het zakelijke adres. De Client-ID alleen is hier niet genoeg.";
+    fout = "Log in met je eigen zakelijke adres, dezelfde als op boaportaal.nl. Niet @boaportaal.nl en niet je Client-ID.";
     teken();
     return;
   }
